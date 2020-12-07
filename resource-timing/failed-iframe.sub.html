@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Resource Timing - test that unsuccessful iframes create entries</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<body>
+<script>
+test(() => {
+  const entries = performance.getEntriesByType("resource");
+  assert_equals(entries.length, 2, "Precondition - Entries for blocking scripts fired");
+}, "Precondition");
+
+const run_test = async url => {
+  const setPerformanceObserver = new Promise(resolve => {
+    const po = new PerformanceObserver(resolve);
+    po.observe({type: "resource"});
+  });
+  const frame = document.createElement("iframe");
+  frame.src = url;
+  document.body.appendChild(frame);
+  const list = await setPerformanceObserver;
+  const entries = list.getEntriesByName(url);
+  assert_equals(entries.length, 1);
+}
+
+const nonexistent_url = "https://nonexistent.{{host}}:{{ports[http][0]}}/";
+
+promise_test(t => {
+  return run_test(nonexistent_url);
+}, "Test iframe from non-existent host");
+
+promise_test(t => {
+  const url = new URL("resources/fake_responses.py?redirect=" + nonexistent_url, location.href);
+  return run_test(url);
+}, "Test iframe redirecting to non-existent host");
+
+</script>
+</body>
+</html>
